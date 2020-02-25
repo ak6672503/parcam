@@ -11,7 +11,7 @@
 // C 运行时头文件
 #include <stdlib.h>
 #include <malloc.h>
-#include <memory.h>
+#include<memory>
 #include <tchar.h>
 #include<vector>
 #include<algorithm>
