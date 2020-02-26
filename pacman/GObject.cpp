@@ -284,3 +284,147 @@ void PacMan::Draw(HDC& memDC) {
 	}
 	m_nFrame++; //绘制下一帧
 }
+
+//敌军对象成员定义代码
+//enermy成员定义：
+std::shared_ptr<PacMan> Enermy::player = nullptr;
+
+//抓住 游戏结束
+void Enermy::Catch() {
+	int DX = m_ptCenter.x - player->GetPos.x;
+	int DY = m_ptCenter.y - player->GetPos().y;
+	if ((-RD < DX && DX < RD) && (-RD < DY && DY < RD)) {
+		player->SetOver();
+	}
+}
+
+void Enermy::Draw(HDC& hdc) {
+	HPEN pen = ::CreatePen(0, 0, color);
+	HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+
+	//画一个半圆形的头
+	Arc(hdc, m_ptCenter.x - DISTANCE, m_ptCenter.y - DISTANCE,
+		m_ptCenter.x + DISTANCE, m_ptCenter.y + DISTANCE,
+		m_ptCenter.x + DISTANCE, m_ptCenter.y,
+		m_ptCenter.x - DISTANCE, m_ptCenter.y);
+
+	int const LEGLENTH = (DISTANCE) / (LEGCOUNTS);
+
+	//根据帧数来绘制身体和“腿部”
+	if (m_nFrame % 2 == 0) {
+	//矩形的身子
+		MoveToEx(hdc, m_ptCenter.x - DISTANCE, m_ptCenter.y, NULL);
+		LineTo(hdc, m_ptCenter.x - DISTANCE, m_ptCenter.y + DISTANCE - LEGLENTH);
+		MoveToEx(hdc, m_ptCenter.x + DISTANCE, m_ptCenter.y, NULL);
+		LineTo(hdc, m_ptCenter.x + DISTANCE, m_ptCenter.y + DISTANCE - LEGLENTH);
+
+		for (int i = 0; i < LEGCOUNTS; i++) {
+			Arc(hdc,
+				m_ptCenter.x - DISTANCE + i * 2 * LEGLENTH,
+				m_ptCenter.y + DISTANCE - 2 * LEGLENTH,
+				m_ptCenter.x - DISTANCE + (i + 1) * 2 * LEGLENTH,
+				m_ptCenter.y + DISTANCE,
+				m_ptCenter.x - DISTANCE + i * 2 * LEGLENTH,
+				m_ptCenter.y + DISTANCE - LEGLENTH,
+				m_ptCenter.x - DISTANCE + (i + 1) * 2 * LEGLENTH,
+				m_ptCenter.y + DISTANCE - LEGLENTH
+			);
+		}
+	}
+	//绘制身体
+	else {
+		MoveToEx(hdc, m_ptCenter.x - DISTANCE, m_ptCenter.y, NULL); 
+		LineTo(hdc, m_ptCenter.x - DISTANCE, m_ptCenter.y + DISTANCE);
+		MoveToEx(hdc, m_ptCenter.x+ DISTANCE, m_ptCenter.y, NULL);
+		LineTo(hdc, m_ptCenter.x + DISTANCE, m_ptCenter.y + DISTANCE);
+
+		MoveToEx(hdc, m_ptCenter.x - DISTANCE, m_ptCenter.y+DISTANCE, NULL);
+		LineTo(hdc, m_ptCenter.x - DISTANCE+LEGLENTH, m_ptCenter.y + DISTANCE- LEGLENTH);
+
+		//从左往右绘制“腿部”
+		for (int i = 0; i < LEGCOUNTS - 1; i++) {
+			Arc(hdc,
+				m_ptCenter.x - DISTANCE + (1 + i * 2) * LEGLENTH,
+				m_ptCenter.y + DISTANCE - 2 * LEGLENTH,
+				m_ptCenter.x - DISTANCE + (3 + i * 2) * LEGLENTH,
+				m_ptCenter.y + DISTANCE,
+				m_ptCenter.x - DISTANCE + (1 + i * 2) * LEGLENTH,
+				m_ptCenter.y + DISTANCE - LEGLENTH,
+				m_ptCenter.x - DISTANCE + (3 + i * 2) * LEGLENTH,
+				m_ptCenter.y + DISTANCE - LEGLENTH
+			);
+		}
+		MoveToEx(hdc, m_ptCenter.x + DISTANCE, m_ptCenter.y + DISTANCE, NULL);
+		LineTo(hdc, m_ptCenter.x + DISTANCE - LEGLENTH, m_ptCenter.y + DISTANCE - LEGLENTH);
+	}
+
+	//根据方向绘制眼睛
+	int R = DISTANCE / 5;
+	switch (m_dir) //分别画左眼和右眼
+	{
+	case UP:
+		Ellipse(hdc, m_ptCenter.x - 2 * R, m_ptCenter.y - 2 * R, m_ptCenter.x, m_ptCenter.y);
+		Ellipse(hdc, m_ptCenter.x , m_ptCenter.y - 2 * R, m_ptCenter.x+2*R, m_ptCenter.y);
+		break;
+
+	case DOWN:
+		Ellipse(hdc, m_ptCenter.x - 2 * R, m_ptCenter.y , m_ptCenter.x, m_ptCenter.y + 2 * R);
+		Ellipse(hdc, m_ptCenter.x, m_ptCenter.y, m_ptCenter.x + 2 * R, m_ptCenter.y + 2 * R);
+		break;
+
+	case LEFT:
+		Ellipse(hdc, m_ptCenter.x - 3 * R, m_ptCenter.y-R, m_ptCenter.x-R, m_ptCenter.y+ R);
+		Ellipse(hdc, m_ptCenter.x -  R, m_ptCenter.y - R, m_ptCenter.x + R, m_ptCenter.y + R);
+
+		break;
+	case RIGHT:
+		Ellipse(hdc, m_ptCenter.x - R, m_ptCenter.y - R, m_ptCenter.x + R, m_ptCenter.y + R);
+		Ellipse(hdc, m_ptCenter.x +R, m_ptCenter.y - R, m_ptCenter.x + 3 * R, m_ptCenter.y + R);
+		break;
+	}
+	m_nFrame++; //准备绘制下一帧数
+	SelectObject(hdc, oldPen); //还原画笔
+	DeleteObject(pen);//删除画笔对象
+	return;
+}
+
+void Enermy::action() {
+	bool b = Collision(); //判断是否发生碰撞
+	MakeDecision(b); //设定方向
+	Catch (); //开始抓捕
+}
+
+//redone成员
+void RedOne::Draw(HDC& hdc) {
+	Enermy::Draw(hdc);
+}
+
+void RedOne::MakeDecision(bool b) {
+//srand(time(0))
+	int i = rand();
+	if (b) { //撞到墙壁，改变方向
+		if (i % 4 == 0) {
+			m_dir == UP ? m_cmd = LEFT : m_cmd = UP; //面向上, 向左拐
+		}
+		else if (i % 3 == 0) {
+			m_dir == DOWN ? m_cmd = UP : m_cmd = RIGHT; //面向右，向上拐
+		}
+		else {
+			m_dir == LEFT ? m_cmd = DOWN : m_cmd = LEFT; //画向左,向下拐
+		}
+		return;
+	}
+	//程序运行到这里，说明没有撞墙，继续处理
+	if (i % 4 == 0) {
+		m_cmd != UP ? m_dir == DOWN : m_cmd == UP;
+	}
+	else if (i % 3 == 0) {
+		m_dir != DOWN ? m_cmd = UP : m_cmd = DOWN;
+	}
+	else if (i % 2 == 0) {
+		m_dir != RIGHT ? m_cmd = LEFT : m_cmd = RIGHT;
+	}
+	else {
+		m_dir != LEFT ? m_cmd = RIGHT : m_cmd = LEFT;
+	}
+}
